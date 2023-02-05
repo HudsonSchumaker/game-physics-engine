@@ -12,6 +12,9 @@ class Application {
         Vec2 pushForce = Vec2(0, 0);
         SDL_Rect liquid;
 
+        Vec2 mouseCursor = Vec2(0, 0);
+        bool leftMouseButtonDown = false;
+
     public:
         Application() = default;
         ~Application() = default;
