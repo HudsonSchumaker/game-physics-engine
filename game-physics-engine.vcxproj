@@ -97,6 +97,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>SDL2.lib;SDL2main.lib;SDL2_ttf.lib;SDL2_image.lib;SDL2_mixer.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -114,6 +115,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>SDL2.lib;SDL2main.lib;SDL2_ttf.lib;SDL2_image.lib;SDL2_mixer.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -127,6 +129,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>SDL2.lib;SDL2main.lib;SDL2_ttf.lib;SDL2_image.lib;SDL2_mixer.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -144,6 +147,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>SDL2.lib;SDL2main.lib;SDL2_ttf.lib;SDL2_image.lib;SDL2_mixer.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -155,7 +159,30 @@
     <None Include="README.md" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="lib\SDL2_gfx\SDL2_gfxPrimitives.c" />
+    <ClCompile Include="lib\SDL2_gfx\SDL2_imageFilter.c" />
+    <ClCompile Include="lib\SDL2_gfx\SDL2_rotozoom.c" />
+    <ClCompile Include="src\Application.cpp" />
+    <ClCompile Include="src\Graphics.cpp" />
     <ClCompile Include="src\Main.cpp" />
+    <ClCompile Include="src\Physics\Particle.cpp" />
+    <ClCompile Include="src\Physics\Vec2.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="assets\basketball.png" />
+    <Image Include="assets\bowlingball.png" />
+    <Image Include="assets\crate.png" />
+    <Image Include="assets\metal.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="lib\SDL2_gfx\SDL2_gfxPrimitives.h" />
+    <ClInclude Include="lib\SDL2_gfx\SDL2_gfxPrimitives_font.h" />
+    <ClInclude Include="lib\SDL2_gfx\SDL2_imageFilter.h" />
+    <ClInclude Include="lib\SDL2_gfx\SDL2_rotozoom.h" />
+    <ClInclude Include="src\Application.h" />
+    <ClInclude Include="src\Graphics.h" />
+    <ClInclude Include="src\Physics\Particle.h" />
+    <ClInclude Include="src\Physics\Vec2.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
