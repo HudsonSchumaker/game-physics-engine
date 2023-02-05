@@ -22,4 +22,9 @@
     <None Include=".gitignore" />
     <None Include=".gitattributes" />
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\Main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
 </Project>
