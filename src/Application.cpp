@@ -1,5 +1,6 @@
 #include "Application.h"
 #include "./Physics/Constants.h"
+#include "Physics/Force.h"
 
 bool Application::IsRunning() {
     return running;
@@ -18,6 +19,11 @@ void Application::Setup() {
     Particle* bigBall = new Particle(200, 100, 3.0);
     bigBall->radius = 12;
     particles.push_back(bigBall);
+
+    liquid.x = 0;
+    liquid.y = Graphics::Height() / 2;
+    liquid.w = Graphics::Width();
+    liquid.h = Graphics::Height() / 2;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -74,41 +80,44 @@ void Application::Update() {
     // Set the time of the current frame to be used in the next one
     timePreviousFrame = SDL_GetTicks();
 
-    // Apply a "wind" force to my particles
-    for (auto particle: particles) {
+    // Apply forces to the particles
+    for (auto particle : particles) {
         Vec2 wind = Vec2(0.2 * PIXELS_PER_METER, 0.0);
         particle->AddForce(wind);
-    }
 
-    // Apply a "weight" force to my particles
-    for (auto particle: particles) {
         Vec2 weight = Vec2(0.0, particle->mass * 9.8 * PIXELS_PER_METER);
         particle->AddForce(weight);
-    }
 
-    // Apply a "push" force to my particles
-    for (auto particle : particles) {
         particle->AddForce(pushForce);
+
+        // Apply a drag force if we are inside the liquid...
+        if (particle->position.y >= liquid.y) {
+            Vec2 drag = Force::GenerateDragForce(*particle, 0.04);
+            particle->AddForce(drag);
+        }
     }
 
-    for (auto particle: particles) {
-        // Integrate the acceleration and velocity to estimate the new position
+    // Integrate the acceleration and velocity to estimate the new position
+    for (auto particle : particles) {
         particle->Integrate(deltaTime);
     }
 
-    for (auto particle: particles) {
+    // Check the boundaries of the window
+    for (auto particle : particles) {
         // Nasty hardcoded flip in velocity if it touches the limits of the screen window
         if (particle->position.x - particle->radius <= 0) {
             particle->position.x = particle->radius;
             particle->velocity.x *= -0.9;
-        } else if (particle->position.x + particle->radius >= Graphics::Width()) {
+        }
+        else if (particle->position.x + particle->radius >= Graphics::Width()) {
             particle->position.x = Graphics::Width() - particle->radius;
             particle->velocity.x *= -0.9;
         }
         if (particle->position.y - particle->radius <= 0) {
             particle->position.y = particle->radius;
             particle->velocity.y *= -0.9;
-        } else if (particle->position.y + particle->radius >= Graphics::Height()) {
+        }
+        else if (particle->position.y + particle->radius >= Graphics::Height()) {
             particle->position.y = Graphics::Height() - particle->radius;
             particle->velocity.y *= -0.9;
         }
@@ -121,10 +130,13 @@ void Application::Update() {
 void Application::Render() {
     Graphics::ClearScreen(0xFF056263);
 
-    for (auto particle: particles) {
+    // Draw the liquid in the screen
+    Graphics::DrawFillRect(liquid.x + liquid.w / 2, liquid.y + liquid.h / 2, liquid.w, liquid.h, 0xFF6E3713);
+
+    for (auto particle : particles) {
         Graphics::DrawFillCircle(particle->position.x, particle->position.y, particle->radius, 0xFFFFFFFF);
     }
-    
+
     Graphics::RenderFrame();
 }
 
