@@ -1,6 +1,8 @@
 #include "Application.h"
 #include "./Physics/Constants.h"
-#include "Physics/Force.h"
+#include "./Physics/Force.h"
+#include "./Physics/CollisionDetection.h"
+#include "./Physics/Contact.h"
 
 bool Application::IsRunning() {
     return running;
@@ -11,19 +13,11 @@ bool Application::IsRunning() {
 ///////////////////////////////////////////////////////////////////////////////
 void Application::Setup() {
     running = Graphics::OpenWindow();
-    
-    Particle* smallBall = new Particle(50, 100, 1.0);
-    smallBall->radius = 4;
-    particles.push_back(smallBall);
-    
-    Particle* bigBall = new Particle(200, 100, 3.0);
-    bigBall->radius = 12;
-    particles.push_back(bigBall);
 
-    liquid.x = 0;
-    liquid.y = Graphics::Height() / 2;
-    liquid.w = Graphics::Width();
-    liquid.h = Graphics::Height() / 2;
+    Body* bigBall = new Body(CircleShape(100), 100, 100, 1.0);
+    Body* smallBall = new Body(CircleShape(50), 500, 100, 1.0);
+    bodies.push_back(bigBall);
+    bodies.push_back(smallBall);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -33,52 +27,20 @@ void Application::Input() {
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
         switch (event.type) {
-        case SDL_QUIT:
-            running = false;
-            break;
-        case SDL_KEYDOWN:
-            if (event.key.keysym.sym == SDLK_ESCAPE)
+            case SDL_QUIT:
                 running = false;
-            if (event.key.keysym.sym == SDLK_UP)
-                pushForce.y = -50 * PIXELS_PER_METER;
-            if (event.key.keysym.sym == SDLK_RIGHT)
-                pushForce.x = 50 * PIXELS_PER_METER;
-            if (event.key.keysym.sym == SDLK_DOWN)
-                pushForce.y = 50 * PIXELS_PER_METER;
-            if (event.key.keysym.sym == SDLK_LEFT)
-                pushForce.x = -50 * PIXELS_PER_METER;
-            break;
-        case SDL_KEYUP:
-            if (event.key.keysym.sym == SDLK_UP)
-                pushForce.y = 0;
-            if (event.key.keysym.sym == SDLK_RIGHT)
-                pushForce.x = 0;
-            if (event.key.keysym.sym == SDLK_DOWN)
-                pushForce.y = 0;
-            if (event.key.keysym.sym == SDLK_LEFT)
-                pushForce.x = 0;
-            break;
-        case SDL_MOUSEMOTION:
-            mouseCursor.x = event.motion.x;
-            mouseCursor.y = event.motion.y;
-            break;
-        case SDL_MOUSEBUTTONDOWN:
-            if (!leftMouseButtonDown && event.button.button == SDL_BUTTON_LEFT) {
-                leftMouseButtonDown = true;
+                break;
+            case SDL_KEYDOWN:
+                if (event.key.keysym.sym == SDLK_ESCAPE)
+                    running = false;
+                break;
+            case SDL_MOUSEMOTION:
                 int x, y;
                 SDL_GetMouseState(&x, &y);
-                mouseCursor.x = x;
-                mouseCursor.y = y;
-            }
-            break;
-        case SDL_MOUSEBUTTONUP:
-            if (leftMouseButtonDown && event.button.button == SDL_BUTTON_LEFT) {
-                leftMouseButtonDown = false;
-                Vec2 impulseDirection = (particles[0]->position - mouseCursor).UnitVector();
-                float impulseMagnitude = (particles[0]->position - mouseCursor).Magnitude() * 5.0;
-                particles[0]->velocity = impulseDirection * impulseMagnitude;
-            }
-            break;
+                bodies[0]->position.x = x;
+                bodies[0]->position.y = y;
+                // ...
+                break;
         }
     }
 }
@@ -87,6 +49,8 @@ void Application::Input() {
 // Update function (called several times per second to update objects)
 ///////////////////////////////////////////////////////////////////////////////
 void Application::Update() {
+    Graphics::ClearScreen(0xFF0F0721);
+    
     // Wait some time until the reach the target frame time in milliseconds
     static int timePreviousFrame;
     int timeToWait = MILLISECS_PER_FRAME - (SDL_GetTicks() - timePreviousFrame);
@@ -101,46 +65,58 @@ void Application::Update() {
     // Set the time of the current frame to be used in the next one
     timePreviousFrame = SDL_GetTicks();
 
-    // Apply forces to the particles
-    for (auto particle : particles) {
-        Vec2 wind = Vec2(0.2 * PIXELS_PER_METER, 0.0);
-        particle->AddForce(wind);
+    // Apply forces to the bodies
+    for (auto body: bodies) {
+        // Apply the weight force
+        // Vec2 weight = Vec2(0.0, body->mass * 9.8 * PIXELS_PER_METER);
+        // body->AddForce(weight);
 
-        Vec2 weight = Vec2(0.0, particle->mass * 9.8 * PIXELS_PER_METER);
-        particle->AddForce(weight);
-
-        particle->AddForce(pushForce);
-
-        // Apply a drag force if we are inside the liquid...
-        if (particle->position.y >= liquid.y) {
-            Vec2 drag = Force::GenerateDragForce(*particle, 0.04);
-            particle->AddForce(drag);
-        }
+        // Apply the wind force
+        // Vec2 wind = Vec2(20.0 * PIXELS_PER_METER, 0.0);
+        // body->AddForce(wind);
     }
 
     // Integrate the acceleration and velocity to estimate the new position
-    for (auto particle : particles) {
-        particle->Integrate(deltaTime);
+    for (auto body: bodies) {
+        body->Update(deltaTime);
     }
 
-    // Check the boundaries of the window
-    for (auto particle : particles) {
-        // Nasty hardcoded flip in velocity if it touches the limits of the screen window
-        if (particle->position.x - particle->radius <= 0) {
-            particle->position.x = particle->radius;
-            particle->velocity.x *= -0.9;
+    // Check all the rigidbodies with the other rigidbodies for collision
+    for (int i = 0; i <= bodies.size() - 1; i++) {
+        for (int j = i + 1; j < bodies.size(); j++) {
+            Body* a = bodies[i];
+            Body* b = bodies[j];
+            a->isColliding = false;
+            b->isColliding = false;
+            Contact contact;
+            if (CollisionDetection::IsColliding(a, b, contact)) {
+                Graphics::DrawFillCircle(contact.start.x, contact.start.y, 3, 0xFFFF00FF);
+                Graphics::DrawFillCircle(contact.end.x, contact.end.y, 3, 0xFFFF00FF);
+                Graphics::DrawLine(contact.start.x, contact.start.y, contact.start.x + contact.normal.x * contact.depth , contact.start.y + contact.normal.y * contact.depth, 0xFFFF00FF);
+                a->isColliding = true;
+                b->isColliding = true;
+            }
         }
-        else if (particle->position.x + particle->radius >= Graphics::Width()) {
-            particle->position.x = Graphics::Width() - particle->radius;
-            particle->velocity.x *= -0.9;
-        }
-        if (particle->position.y - particle->radius <= 0) {
-            particle->position.y = particle->radius;
-            particle->velocity.y *= -0.9;
-        }
-        else if (particle->position.y + particle->radius >= Graphics::Height()) {
-            particle->position.y = Graphics::Height() - particle->radius;
-            particle->velocity.y *= -0.9;
+    }
+
+    // Check the boundaries of the window applying a hardcoded bounce flip in velocity
+    for (auto body: bodies) {
+        if (body->shape->GetType() == CIRCLE) {
+            CircleShape* circleShape = (CircleShape*) body->shape;
+            if (body->position.x - circleShape->radius <= 0) {
+                body->position.x = circleShape->radius;
+                body->velocity.x *= -0.9;
+            } else if (body->position.x + circleShape->radius >= Graphics::Width()) {
+                body->position.x = Graphics::Width() - circleShape->radius;
+                body->velocity.x *= -0.9;
+            }
+            if (body->position.y - circleShape->radius <= 0) {
+                body->position.y = circleShape->radius;
+                body->velocity.y *= -0.9;
+            } else if (body->position.y + circleShape->radius >= Graphics::Height()) {
+                body->position.y = Graphics::Height() - circleShape->radius;
+                body->velocity.y *= -0.9;
+            }
         }
     }
 }
@@ -149,13 +125,18 @@ void Application::Update() {
 // Render function (called several times per second to draw objects)
 ///////////////////////////////////////////////////////////////////////////////
 void Application::Render() {
-    Graphics::ClearScreen(0xFF056263);
+    // Draw all bodies
+    for (auto body: bodies) {
+        Uint32 color = body->isColliding ? 0xFF0000FF : 0xFFFFFFFF;
 
-    // Draw the liquid in the screen
-    Graphics::DrawFillRect(liquid.x + liquid.w / 2, liquid.y + liquid.h / 2, liquid.w, liquid.h, 0xFF6E3713);
-
-    for (auto particle : particles) {
-        Graphics::DrawFillCircle(particle->position.x, particle->position.y, particle->radius, 0xFFFFFFFF);
+        if (body->shape->GetType() == CIRCLE) {
+            CircleShape* circleShape = (CircleShape*) body->shape;
+            Graphics::DrawCircle(body->position.x, body->position.y, circleShape->radius, body->rotation, color);
+        }
+        if (body->shape->GetType() == BOX) {
+            BoxShape* boxShape = (BoxShape*) body->shape;
+            Graphics::DrawPolygon(body->position.x, body->position.y, boxShape->worldVertices, 0xFFFFFFFF);
+        }
     }
 
     Graphics::RenderFrame();
@@ -165,8 +146,8 @@ void Application::Render() {
 // Destroy function to delete objects and close the window
 ///////////////////////////////////////////////////////////////////////////////
 void Application::Destroy() {
-    for (auto particle: particles) {
-        delete particle;
+    for (auto body: bodies) {
+        delete body;
     }
     Graphics::CloseWindow();
 }
