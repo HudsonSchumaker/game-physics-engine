@@ -1,13 +1,7 @@
 #ifndef GRAPHICS_H
 #define GRAPHICS_H
-#include <SDL.h>
-#include <math.h>
-#include <stdint.h>
-#include <SDL_ttf.h>
-#include <SDL_net.h>
-#include <SDL_image.h>
-#include <SDL_mixer.h>
 
+#include <SDL.h>
 #include "../lib/SDL2_gfx/SDL2_gfxPrimitives.h"
 #include "Physics/Vec2.h"
 #include <vector>
