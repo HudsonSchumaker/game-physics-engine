@@ -1,4 +1,6 @@
+#include "../Graphics.h"
 #include "Body.h"
+#include <math.h>
 #include <iostream>
 
 Body::Body(const Shape& shape, float x, float y, float mass) {
@@ -11,6 +13,8 @@ Body::Body(const Shape& shape, float x, float y, float mass) {
     this->angularAcceleration = 0.0;
     this->sumForces = Vec2(0, 0);
     this->sumTorque = 0.0;
+    this->restitution = 1.0;
+    this->friction = 0.7;
     this->mass = mass;
     if (mass != 0.0) {
         this->invMass = 1.0 / mass;
@@ -28,7 +32,21 @@ Body::Body(const Shape& shape, float x, float y, float mass) {
 
 Body::~Body() {
     delete shape;
+    SDL_DestroyTexture(texture);
     std::cout << "Body destructor called!" << std::endl;
+}
+
+void Body::SetTexture(const char* textureFileName) {
+    SDL_Surface* surface = IMG_Load(textureFileName);
+    if (surface) {
+        texture = SDL_CreateTextureFromSurface(Graphics::renderer, surface);
+        SDL_FreeSurface(surface);
+    }
+}
+
+bool Body::IsStatic() const {
+    const float epsilon = 0.005f;
+    return fabs(invMass - 0.0) < epsilon;
 }
 
 void Body::AddForce(const Vec2& force) {
@@ -47,7 +65,26 @@ void Body::ClearTorque() {
     sumTorque = 0.0;
 }
 
+void Body::ApplyImpulse(const Vec2& j) {
+    if (IsStatic()) {
+        return;
+    }
+    velocity += j * invMass;
+}
+
+void Body::ApplyImpulse(const Vec2& j, const Vec2& r) {
+    if (IsStatic()) {
+        return;
+    }
+    velocity += j * invMass;
+    angularVelocity += r.Cross(j) * invI;
+}
+
 void Body::IntegrateLinear(float dt) {
+    if (IsStatic()) {
+        return;
+    }
+
     // Find the acceleration based on the forces that are being applied and the mass
     acceleration = sumForces * invMass;
 
@@ -62,6 +99,10 @@ void Body::IntegrateLinear(float dt) {
 }
 
 void Body::IntegrateAngular(float dt) {
+    if (IsStatic()) {
+        return;
+    }
+
     // Find the angular acceleration based on the torque that is being applied and the moment of inertia
     angularAcceleration = sumTorque * invI;
 
@@ -78,9 +119,5 @@ void Body::IntegrateAngular(float dt) {
 void Body::Update(float dt) {
     IntegrateLinear(dt);
     IntegrateAngular(dt);
-    bool isPolygon = shape->GetType() == POLYGON || shape->GetType() == BOX;
-    if (isPolygon) {
-        PolygonShape* polygonShape = (PolygonShape*) shape;
-        polygonShape->UpdateVertices(rotation, position);
-    }
+    shape->UpdateVertices(rotation, position);
 }
