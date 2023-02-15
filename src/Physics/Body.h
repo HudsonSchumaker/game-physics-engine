@@ -1,3 +1,6 @@
+
+// Hudson Schumaker
+
 #ifndef BODY_H
 #define BODY_H
 
