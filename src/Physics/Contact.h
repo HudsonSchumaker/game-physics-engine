@@ -1,3 +1,6 @@
+
+// Hudson Schumaker
+
 #ifndef CONTACT_H
 #define CONTACT_H
 
